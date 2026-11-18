@@ -1,9 +1,3 @@
-"""EnvGrave scanner.
-
-Scans a project directory for environment variable problems: unused,
-missing, duplicated, or inconsistently named variables.
-"""
-
 from __future__ import annotations
 
 import difflib
@@ -86,7 +80,7 @@ def _line_number(text, pos):
 
 
 def _read_text(path):
-    """Read a file as text. Returns None for binaries or oversized files."""
+    # Returns None for binaries or files over the size limit
     try:
         with open(path, "rb") as fh:
             data = fh.read(MAX_FILE_SIZE + 1)
@@ -109,7 +103,6 @@ def _is_within(path, root):
 
 
 def parse_env_file(path):
-    """Return [(name, line), ...] for assignments found in an env file."""
     entries = []
     text = _read_text(path)
     if text is None:

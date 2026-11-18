@@ -11,7 +11,6 @@ from envgrave.scanner import MAX_FILE_SIZE, analyze, scan  # noqa: E402
 
 
 def make_project(files):
-    """Create a temp project from {relpath: content} and return its directory."""
     tmp = tempfile.mkdtemp()
     for rel, content in files.items():
         full = os.path.join(tmp, rel)
