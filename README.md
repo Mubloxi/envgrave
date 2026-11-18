@@ -8,21 +8,70 @@ the network.
 
 ## Installation
 
-Install directly from GitHub:
+### PyPI (once published)
 
 ```bash
-pip install git+https://github.com/<your-username>/envgrave.git
+pip install envgrave
+```
+
+Also works with pipx and uv:
+
+```bash
+pipx install envgrave
+uv tool install envgrave
+```
+
+### From GitHub
+
+```bash
+pip install git+https://github.com/Mubloxi/envgrave.git
 ```
 
 Or clone and install locally:
 
 ```bash
-git clone https://github.com/<your-username>/envgrave.git
+git clone https://github.com/Mubloxi/envgrave.git
 cd envgrave
 pip install .
 ```
 
-`pip install envgrave` will be available once the package is published to PyPI.
+### Linux packages
+
+Download the `.deb` or `.rpm` from the [GitHub Releases](https://github.com/Mubloxi/envgrave/releases) page.
+
+**Debian/Ubuntu (.deb):**
+
+```bash
+sudo dpkg -i envgrave_1.0.0_amd64.deb
+```
+
+Uninstall:
+
+```bash
+sudo apt remove envgrave
+```
+
+**Fedora/RPM (.rpm):**
+
+```bash
+sudo rpm -i envgrave-1.0.0-1.noarch.rpm
+```
+
+Uninstall:
+
+```bash
+sudo rpm -e envgrave
+```
+
+### Standalone executables
+
+Download the standalone binary for your platform from [GitHub Releases](https://github.com/Mubloxi/envgrave/releases):
+
+- Windows: `envgrave.exe` (x86_64)
+- macOS: `envgrave` (x86_64, ARM64)
+- Linux: `envgrave` (x86_64, ARM64)
+
+No installation required — just run the binary. No administrator privileges needed.
 
 ## Quick start
 
@@ -117,6 +166,7 @@ entries from the scan.
 - Only static environment variable references are detected.
 - Variable values are never read or displayed.
 - No network access, no telemetry, no database.
+- Standalone executables bundle a Python interpreter and are larger than the pip package.
 
 ## Security
 

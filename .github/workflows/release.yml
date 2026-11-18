@@ -1,0 +1,101 @@
+name: Build Release Artifacts
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install .
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -t .
+
+  release-assets:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: |
+          pip install build pyinstaller
+
+      - name: Run tests
+        run: |
+          pip install .
+          python -m unittest discover -s tests -t .
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Build standalone executable (Linux)
+        run: pyinstaller pyinstaller.spec --distpath dist/linux --workpath build/linux --clean
+        env:
+          PYINSTALLER_DIST: dist/linux
+
+      - name: Create .deb package
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq dpkg-dev
+          mkdir -p packaging/debian/DEBIAN packaging/debian/usr/local/bin packaging/debian/usr/share/envgrave
+          cp -r envgrave packaging/debian/usr/share/envgrave/
+          cp README.md LICENSE packaging/debian/usr/share/envgrave/
+          cat > packaging/debian/DEBIAN/control <<EOF
+Package: envgrave
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: EnvGrave <envgrave@github.com>
+Description: Scan projects for unused, missing, duplicated, or misconfigured environment variables.
+EOF
+          echo '#!/bin/sh' > packaging/debian/usr/local/bin/envgrave
+          echo 'exec python3 -m envgrave "$@"' >> packaging/debian/usr/local/bin/envgrave
+          chmod +x packaging/debian/usr/local/bin/envgrave
+          dpkg-deb --build packaging/debian envgrave_1.0.0_amd64.deb
+
+      - name: Attempt .rpm package
+        run: |
+          if command -v rpmbuild >/dev/null 2>&1; then
+            mkdir -p packaging/rpm/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+            cp packaging/rpm/envgrave.spec packaging/rpm/SPECS/
+            rpmbuild --define "_topdir $PWD/packaging/rpm" -bb packaging/rpm/SPECS/envgrave.spec
+            cp packaging/rpm/RPMS/*/*.rpm . || true
+          else
+            echo "rpmbuild not available on this runner, skipping .rpm"
+          fi
+        continue-on-error: true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/linux/envgrave
+            envgrave_1.0.0_amd64.deb
+            *.rpm
