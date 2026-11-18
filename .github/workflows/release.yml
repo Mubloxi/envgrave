@@ -29,7 +29,11 @@ jobs:
 
   release-assets:
     needs: build-and-test
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -47,46 +51,70 @@ jobs:
           pip install .
           python -m unittest discover -s tests -t .
 
-      - name: Build wheel and sdist
+      - name: Build wheel and sdist (Linux only)
+        if: runner.os == 'Linux'
         run: python -m build
 
-      - name: Build standalone executable (Linux)
-        run: pyinstaller pyinstaller.spec --distpath dist/linux --workpath build/linux --clean
-        env:
-          PYINSTALLER_DIST: dist/linux
+      - name: Upload wheel and sdist (Linux only)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-distributions
+          path: dist/
 
-      - name: Create .deb package
+      - name: Build standalone executable (one-directory for fast startup)
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq dpkg-dev
-          mkdir -p packaging/debian/DEBIAN packaging/debian/usr/local/bin packaging/debian/usr/share/envgrave
-          cp -r envgrave packaging/debian/usr/share/envgrave/
-          cp README.md LICENSE packaging/debian/usr/share/envgrave/
-          cat > packaging/debian/DEBIAN/control <<EOF
-Package: envgrave
-Version: 1.0.0
-Section: utils
-Priority: optional
-Architecture: amd64
-Maintainer: EnvGrave <envgrave@github.com>
-Description: Scan projects for unused, missing, duplicated, or misconfigured environment variables.
-EOF
-          echo '#!/bin/sh' > packaging/debian/usr/local/bin/envgrave
-          echo 'exec python3 -m envgrave "$@"' >> packaging/debian/usr/local/bin/envgrave
-          chmod +x packaging/debian/usr/local/bin/envgrave
-          dpkg-deb --build packaging/debian envgrave_1.0.0_amd64.deb
+          pyinstaller --onedir --clean --name envgrave envgrave/__main__.py
 
-      - name: Attempt .rpm package
+      - name: Test standalone executable
+        shell: bash
         run: |
-          if command -v rpmbuild >/dev/null 2>&1; then
-            mkdir -p packaging/rpm/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-            cp packaging/rpm/envgrave.spec packaging/rpm/SPECS/
-            rpmbuild --define "_topdir $PWD/packaging/rpm" -bb packaging/rpm/SPECS/envgrave.spec
-            cp packaging/rpm/RPMS/*/*.rpm . || true
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            ./dist/envgrave/envgrave.exe --version
+            ./dist/envgrave/envgrave.exe --help | head -5
           else
-            echo "rpmbuild not available on this runner, skipping .rpm"
+            ./dist/envgrave/envgrave --version
+            ./dist/envgrave/envgrave --help | head -5
           fi
-        continue-on-error: true
+
+      - name: Create versioned archive
+        shell: bash
+        run: |
+          VERSION="1.0.0"
+          case "${{ runner.os }}" in
+            Windows)
+              PLATFORM="windows-x64"
+              7z a "envgrave-${VERSION}-${PLATFORM}.zip" dist/envgrave/
+              ;;
+            Linux)
+              PLATFORM="linux-x64"
+              tar czf "envgrave-${VERSION}-${PLATFORM}.tar.gz" -C dist envgrave/
+              ;;
+            macOS)
+              if [ "$(uname -m)" = "arm64" ]; then
+                PLATFORM="macos-arm64"
+              else
+                PLATFORM="macos-x64"
+              fi
+              tar czf "envgrave-${VERSION}-${PLATFORM}.tar.gz" -C dist envgrave/
+              ;;
+          esac
+          echo "ARCHIVE=envgrave-${VERSION}-${PLATFORM}" >> $GITHUB_ENV
+
+      - name: Upload standalone archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVE }}
+          path: ${{ env.ARCHIVE }}.*
+
+  create-release:
+    needs: release-assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
@@ -94,8 +122,4 @@ EOF
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            dist/*.whl
-            dist/*.tar.gz
-            dist/linux/envgrave
-            envgrave_1.0.0_amd64.deb
-            *.rpm
+            artifacts/**

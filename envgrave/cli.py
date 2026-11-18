@@ -18,6 +18,9 @@ def build_parser():
     parser.add_argument(
         "--version", action="version", version=f"EnvGrave {__version__}"
     )
+    parser.add_argument(
+        "--debug", action="store_true", help="show full tracebacks on errors"
+    )
 
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--no-color", action="store_true", help="disable color output")
@@ -198,10 +201,17 @@ def build_json(result, analysis):
     }
 
 
-def main(argv=None):
-    parser = build_parser()
-    args = parser.parse_args(argv)
+def _prepare_console():
+    # Use UTF-8 on Windows to avoid encoding errors with non-English paths
+    if sys.platform == "win32":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
 
+
+def _run(args):
     command = args.command or "scan"
     path = getattr(args, "path", None) or "."
 
@@ -218,7 +228,7 @@ def main(argv=None):
     )
 
     if not os.path.isdir(path):
-        print(f"envgrave: not a directory: {path}", file=sys.stderr)
+        print(f"Error: Directory not found: {path}", file=sys.stderr)
         return 2
 
     if command == "check":
@@ -243,3 +253,22 @@ def main(argv=None):
     ):
         return 1
     return 0
+
+
+def main(argv=None):
+    _prepare_console()
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    debug = getattr(args, "debug", False)
+
+    try:
+        return _run(args)
+    except KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+        return 130
+    except Exception as exc:
+        if debug:
+            raise
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1

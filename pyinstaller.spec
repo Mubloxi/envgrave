@@ -2,14 +2,16 @@
 block_cipher = None
 
 a = Analysis(
-    ["envgrave/__main__.py"],
+    ["pyinstaller_entry.py"],
     pathex=["."],
     binaries=[],
     datas=[("LICENSE", "."), ("README.md", ".")],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        "newspaper", "cloudscraper", "nltk", "Crypto", "Cryptodome",
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

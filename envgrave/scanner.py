@@ -173,6 +173,11 @@ def _load_ignore_file(root, ignored):
         pass
 
 
+def _walk_error(error):
+    # Ignore permission errors and locked files during traversal
+    pass
+
+
 def scan(root, ignored_dirs=None):
     if ignored_dirs is None:
         ignored_dirs = set()
@@ -182,7 +187,7 @@ def scan(root, ignored_dirs=None):
 
     _load_ignore_file(root, ignored)
 
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False, onerror=_walk_error):
         dirnames[:] = [
             d
             for d in dirnames

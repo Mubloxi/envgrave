@@ -8,7 +8,7 @@ the network.
 
 ## Installation
 
-### PyPI (once published)
+### Python (pip, pipx, uv)
 
 ```bash
 pip install envgrave
@@ -19,6 +19,7 @@ Also works with pipx and uv:
 ```bash
 pipx install envgrave
 uv tool install envgrave
+uvx envgrave scan .
 ```
 
 ### From GitHub
@@ -35,9 +36,28 @@ cd envgrave
 pip install .
 ```
 
-### Linux packages
+### Windows — standalone executable
 
-Download the `.deb` or `.rpm` from the [GitHub Releases](https://github.com/Mubloxi/envgrave/releases) page.
+Download `envgrave-1.0.0-windows-x64.zip` from
+[GitHub Releases](https://github.com/Mubloxi/envgrave/releases). Extract it and
+run `envgrave.exe` from any directory. No Python installation required.
+
+Optional: add the extracted folder to your PATH so you can run `envgrave` from
+anywhere.
+
+### Linux — standalone executable
+
+Download `envgrave-1.0.0-linux-x64.tar.gz` or
+`envgrave-1.0.0-linux-arm64.tar.gz` from GitHub Releases. Extract and run the
+`envgrave` binary.
+
+### macOS — standalone executable
+
+Download `envgrave-1.0.0-macos-x64.tar.gz` or
+`envgrave-1.0.0-macos-arm64.tar.gz` from GitHub Releases. Extract and run the
+`envgrave` binary.
+
+### Linux packages
 
 **Debian/Ubuntu (.deb):**
 
@@ -63,15 +83,21 @@ Uninstall:
 sudo rpm -e envgrave
 ```
 
-### Standalone executables
+### Package managers
 
-Download the standalone binary for your platform from [GitHub Releases](https://github.com/Mubloxi/envgrave/releases):
+**WinGet** (Windows):
 
-- Windows: `envgrave.exe` (x86_64)
-- macOS: `envgrave` (x86_64, ARM64)
-- Linux: `envgrave` (x86_64, ARM64)
+```bash
+winget install Mubloxi.EnvGrave
+```
 
-No installation required — just run the binary. No administrator privileges needed.
+**Homebrew** (macOS/Linux):
+
+```bash
+brew install envgrave
+```
+
+Only documented methods that have been built and published are listed above.
 
 ## Quick start
 
@@ -99,6 +125,7 @@ envgrave list
 --no-color    Disable terminal colors
 --strict      Treat warnings as failures (nonzero exit code)
 --ignore      Extra directory names to ignore, comma-separated
+--debug       Show full tracebacks on unexpected errors
 --version     Show version and exit
 ```
 
@@ -161,6 +188,11 @@ not errors, since different files intentionally contain different variables.
 A `.envgraveignore` file with one directory or file name per line excludes
 entries from the scan.
 
+## Shell completion
+
+Bash, Zsh, and PowerShell completion scripts are in the `completion/` directory.
+Source the appropriate file in your shell profile.
+
 ## Limitations
 
 - Only static environment variable references are detected.
@@ -175,6 +207,23 @@ environment variable values, never modifies `.env` files, never executes code
 from scanned projects, and never follows symlinks outside the selected project.
 Directories such as `.git`, `node_modules`, `venv`, `dist`, and `build` are
 ignored by default, and files larger than 1 MB are skipped.
+
+## Updates and uninstallation
+
+**pip:** `pip install --upgrade envgrave` / `pip uninstall envgrave`
+
+**pipx:** `pipx upgrade envgrave` / `pipx uninstall envgrave`
+
+**uv:** `uv tool upgrade envgrave` / `uv tool uninstall envgrave`
+
+**Standalone executable:** Replace the binary with the new version. No registry
+changes, services, or scheduled tasks are created.
+
+**.deb:** `sudo apt remove envgrave`
+
+**.rpm:** `sudo rpm -e envgrave`
+
+**Homebrew:** `brew upgrade envgrave` / `brew uninstall envgrave`
 
 ## Contributing
 

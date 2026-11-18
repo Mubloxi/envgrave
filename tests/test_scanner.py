@@ -305,6 +305,43 @@ class CliTests(unittest.TestCase):
         self.assertIn("SECRET", proc.stdout)
         self.assertNotIn("Missing", proc.stdout)
 
+    def test_path_with_spaces(self):
+        tmp = make_project({"my project/.env": "A=1\n", "my project/app.js": "process.env.A\n"})
+        proc = self.run_cli(["scan", tmp])
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("Valid (1)", proc.stdout)
+
+    def test_unicode_path(self):
+        tmp = make_project({"プロジェクト/.env": "A=1\n", "プロジェクト/app.js": "process.env.A\n"})
+        proc = self.run_cli(["scan", tmp])
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("Valid (1)", proc.stdout)
+
+    def test_directory_not_found(self):
+        proc = self.run_cli(["scan", "/nonexistent/path/12345"])
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("Error: Directory not found", proc.stderr)
+
+    def test_debug_shows_traceback(self):
+        tmp = make_project({"app.js": "process.env.X\n"})
+        proc = self.run_cli(["--debug", "scan", tmp])
+        self.assertEqual(proc.returncode, 0)
+
+
+class StartupBenchmarks(unittest.TestCase):
+    def test_startup_time(self):
+        import time
+        start = time.time()
+        proc = subprocess.run(
+            [sys.executable, "-m", "envgrave", "--version"],
+            capture_output=True, text=True,
+        )
+        elapsed = time.time() - start
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("1.0.0", proc.stdout)
+        # Startup should be well under 2 seconds
+        self.assertLess(elapsed, 2.0, f"Startup took {elapsed:.2f}s")
+
 
 if __name__ == "__main__":
     unittest.main()
